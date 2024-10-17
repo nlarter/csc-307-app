@@ -39,20 +39,46 @@ function MyApp() {
     return promise;
   }
 
+
   function updateList(person) {
     postUser(person)
-      .then(() => setCharacters([...characters, person]))
+      .then((response) => {
+        if (response.status === 201) {
+          return response.json();
+        } else {
+          throw new Error('Failed to add user');
+        }
+      })
+      .then((addedUser) => {
+        setCharacters((prevCharacters) => [...prevCharacters, addedUser]);
+      })
       .catch((error) => {
         console.log(error);
       });
   }
 
   function removeOneCharacter(index) {
-    const updated = characters.filter((character, i) => {
-      return i !== index;
+    const characterToDelete = characters[index];
+    fetch(`http://localhost:8000/users/${characterToDelete.id}`, {
+      method: 'DELETE'
+    })
+    .then(response => {
+      if (response.status === 204) {
+        const updated = characters.filter((character, i) => {
+          return i !== index;
+        });
+        setCharacters(updated);
+      } else if (response.status === 404) {
+        console.log('User not found');
+      } else {
+        console.log('Failed to delete user');
+      }
+    })
+    .catch(error => {
+      console.log('Error:', error);
     });
-    setCharacters(updated);
   }
+
   return (
   <div className="container">
     <Table
