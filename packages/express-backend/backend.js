@@ -3,6 +3,8 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
+import userModel from "./models/user.js";
+
 
 
 dotenv.config();
@@ -18,7 +20,6 @@ const app = express();
 const port = 8000;
 
 
-
 app.use(cors());
 app.use(express.json());
 
@@ -28,6 +29,18 @@ function findUserByName(name) {
 
 function findUserByNameAndJob(name, job) {
   return userModel.find({ name: name, job: job });
+}
+
+function getUsers(name, job) {
+  let promise;
+  if (name === undefined && job === undefined) {
+    promise = userModel.find();
+  } else if (name && !job) {
+    promise = findUserByName(name);
+  } else if (job && !name) {
+    promise = findUserByJob(job);
+  }
+  return promise;
 }
 
 app.get("/users", (req, res) => {
@@ -50,7 +63,13 @@ app.get("/users", (req, res) => {
         res.status(500).send(err.message);
       });
   } else {
-    res.send(users);
+    getUsers(name, job)
+    .then(result => {
+      res.send({ users_list: result });
+    })
+    .catch(err => {
+      res.status(500).send(err.message);
+    });
   }
 });
 
@@ -90,14 +109,6 @@ app.post("/users", (req, res) => {
     });
 });
 
-const generateId = (user) => {
-  const id = Math.floor(Math.random() * 1000000);
-  user["id"] = id;
-};
-
-const deleteUser = (user) => {
-  users["users_list"] = users["users_list"].filter(cuser => cuser["id"] !== user["id"]);
-};
 
 app.delete("/users/:id", (req, res) => {
   const id = req.params.id;
